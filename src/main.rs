@@ -12,6 +12,8 @@ const BUFFER_BYTE_LEN: usize = 16;
             about = "A cli for testing submarine commands.")]
 struct Opt {
     cmd: String,
+    a: f32,
+    b: f32,
 }
 
 fn main() {
@@ -22,6 +24,8 @@ fn main() {
     let cmd: [u8; BUFFER_BYTE_LEN] = match opt.cmd.as_str() {
         "enable" => create_ballast_command(1).unwrap(),
         "disable" => create_ballast_command(0).unwrap(),
+        "prop" => create_prop_command(opt.a, opt.b).unwrap(),
+
         "bad-buf-start" => {
             let mut buf = create_ballast_command(0).unwrap();
             buf[0] = 0xB;
@@ -66,4 +70,25 @@ fn create_ballast_command(state: u8) -> Result<[u8; BUFFER_BYTE_LEN], ()> {
     } else {
         Err(())
     }
+}
+
+fn create_prop_command(x: f32, y: f32) -> Result<[u8; BUFFER_BYTE_LEN], ()> {
+    let mut buf = create_command_buffer_template();
+
+    let x_bytes = x.to_le_bytes();
+    let y_bytes = y.to_le_bytes();
+
+    buf[1] = 0x1;
+
+    buf[2] = x_bytes[0];
+    buf[3] = x_bytes[1];
+    buf[4] = x_bytes[2];
+    buf[5] = x_bytes[3];
+
+    buf[6] = y_bytes[0];
+    buf[7] = y_bytes[1];
+    buf[8] = y_bytes[2];
+    buf[9] = y_bytes[3];
+
+    Ok(buf)
 }
