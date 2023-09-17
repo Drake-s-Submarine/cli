@@ -22,22 +22,21 @@ fn main() {
         .expect("Failed to connect to socket.");
     
     let cmd: [u8; BUFFER_BYTE_LEN] = match opt.cmd.as_str() {
-        "enable" => create_ballast_command(1).unwrap(),
-        "disable" => create_ballast_command(0).unwrap(),
+        "bal" => create_ballast_command(opt.a, opt.b).unwrap(),
         "prop" => create_prop_command(opt.a, opt.b).unwrap(),
 
         "bad-buf-start" => {
-            let mut buf = create_ballast_command(0).unwrap();
+            let mut buf = create_ballast_command(opt.a, opt.b).unwrap();
             buf[0] = 0xB;
             buf
         },
         "bad-buf-end" => {
-            let mut buf = create_ballast_command(0).unwrap();
+            let mut buf = create_ballast_command(opt.a, opt.b).unwrap();
             buf[BUFFER_BYTE_LEN - 1] = 0xE;
             buf
         },
         "bad-buf-mod" => {
-            let mut buf = create_ballast_command(0).unwrap();
+            let mut buf = create_ballast_command(opt.a, opt.b).unwrap();
             buf[1] = 0xF;
             buf
         },
@@ -46,6 +45,8 @@ fn main() {
             return;
         }
     };
+
+    println!("{:?}", cmd);
 
     socket.write_all(&cmd)
         .expect("Failed to write command to socket.");
@@ -60,16 +61,21 @@ fn create_command_buffer_template() -> [u8; BUFFER_BYTE_LEN] {
     buf
 }
 
-fn create_ballast_command(state: u8) -> Result<[u8; BUFFER_BYTE_LEN], ()> {
+fn create_ballast_command(active: f32, mode: f32) -> Result<[u8; BUFFER_BYTE_LEN], ()> {
     let mut buf = create_command_buffer_template();
+    buf[1] = BALLAST_ID;
 
-    if state < 3 {
-        buf[2] = state;
-        buf[1] = BALLAST_ID;
-        Ok(buf)
+    if active > 0.5 {
+        if mode > 0.5 {
+            buf[2] = 1;
+        } else {
+            buf[2] = 2;
+        }
     } else {
-        Err(())
+        buf[2] = 0;
     }
+
+    Ok(buf)
 }
 
 fn create_prop_command(x: f32, y: f32) -> Result<[u8; BUFFER_BYTE_LEN], ()> {
